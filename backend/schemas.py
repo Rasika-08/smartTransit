@@ -253,3 +253,19 @@ class DutyResponse(BaseModel):
 class GenerateScheduleRequest(BaseModel):
     organization_id: int
     schedule_date: date
+
+class UserCreate(BaseModel):
+    organization_id: int
+    name: str
+    email: str
+    password: str
+    role: str = "ADMIN"
+    
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
