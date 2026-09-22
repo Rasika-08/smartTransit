@@ -2563,9 +2563,14 @@ def login_user(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    user = db.query(models.User).filter(
-        models.User.email == form_data.username
-    ).first()
+
+    user = (
+        db.query(models.User)
+        .filter(
+            models.User.email == form_data.username
+        )
+        .first()
+    )
 
     if not user:
         raise HTTPException(
@@ -2573,7 +2578,10 @@ def login_user(
             detail="Invalid email or password"
         )
 
-    if not verify_password(form_data.password, user.password_hash):
+    if not verify_password(
+        form_data.password,
+        user.password_hash
+    ):
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password"
@@ -2584,8 +2592,7 @@ def login_user(
             "user_id": user.id,
             "organization_id": user.organization_id,
             "role": user.role
-        },
-        expires_delta=timedelta(hours=24)
+        }
     )
 
     return {
