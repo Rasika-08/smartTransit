@@ -15,6 +15,7 @@ import Scheduling from "./Scheduling";
 import Conflict from "./Conflict";
 import Duty from "./Duty";
 import Analytics from "./Analytics";
+import Reports from "./Reports";
 
 const API_URL = "http://127.0.0.1:8000";
 
@@ -543,6 +544,12 @@ function App() {
           >
             Analytics
           </button>
+          <button
+            className={`nav-button ${page === "reports" ? "active" : ""}`}
+            onClick={() => setPage("reports")}
+          >
+            Reports
+          </button>
 
           <div className="status">
             ● System Online
@@ -576,6 +583,7 @@ function App() {
         <Duty />
       )}
       {page === "analytics" && <Analytics />}
+      {page === "reports" && <Reports />}
 
       {page === "routes" && (
 
