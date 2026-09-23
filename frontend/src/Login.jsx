@@ -45,15 +45,23 @@ function Login({ onLogin }) {
         data.access_token
       );
 
-      // Store basic user information
+      // Store organization
       localStorage.setItem(
         "organization_id",
         "1"
       );
 
+      console.log("Login successful");
+      console.log(
+        "Access token stored:",
+        !!localStorage.getItem("access_token")
+      );
+
+      // Tell App.jsx that login was successful
       if (onLogin) {
         onLogin();
       }
+
     } catch (error) {
       console.error(
         "Login error:",
@@ -63,6 +71,7 @@ function Login({ onLogin }) {
       setError(
         "Unable to connect to the backend."
       );
+
     } finally {
       setLoading(false);
     }
@@ -81,7 +90,7 @@ function Login({ onLogin }) {
       <div
         style={{
           width: "400px",
-          background: "white",
+          background: "#ffffff",
           padding: "40px",
           borderRadius: "12px",
           boxShadow:
@@ -122,7 +131,11 @@ function Login({ onLogin }) {
         )}
 
         <form onSubmit={handleLogin}>
-          <div style={{ marginBottom: "20px" }}>
+          <div
+            style={{
+              marginBottom: "20px"
+            }}
+          >
             <label
               style={{
                 display: "block",
@@ -151,7 +164,11 @@ function Login({ onLogin }) {
             />
           </div>
 
-          <div style={{ marginBottom: "25px" }}>
+          <div
+            style={{
+              marginBottom: "25px"
+            }}
+          >
             <label
               style={{
                 display: "block",
@@ -187,7 +204,7 @@ function Login({ onLogin }) {
               width: "100%",
               padding: "13px",
               background: "#2563eb",
-              color: "white",
+              color: "#ffffff",
               border: "none",
               borderRadius: "6px",
               fontSize: "16px",

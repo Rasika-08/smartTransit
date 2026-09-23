@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
+import { apiFetch, API_URL } from "./api";
 
-const API_URL = "http://127.0.0.1:8000";
 const ORGANIZATION_ID = 1;
 
 function Duty() {
@@ -26,6 +26,16 @@ function Duty() {
     status: "PLANNED"
   });
 
+  const showMessage = (text, type) => {
+    setMessage(text);
+    setMessageType(type);
+  };
+
+  const clearMessage = () => {
+    setMessage("");
+    setMessageType("");
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -35,16 +45,24 @@ function Duty() {
         crewResponse,
         busesResponse
       ] = await Promise.all([
-        fetch(
+        apiFetch(
           `${API_URL}/duties?organization_id=${ORGANIZATION_ID}`
         ),
-        fetch(
+        apiFetch(
           `${API_URL}/crew?organization_id=${ORGANIZATION_ID}`
         ),
-        fetch(
+        apiFetch(
           `${API_URL}/buses?organization_id=${ORGANIZATION_ID}`
         )
       ]);
+
+      if (
+        dutiesResponse.status === 401 ||
+        crewResponse.status === 401 ||
+        busesResponse.status === 401
+      ) {
+        throw new Error("Authentication expired");
+      }
 
       if (!dutiesResponse.ok) {
         throw new Error("Failed to load duties");
@@ -65,25 +83,19 @@ function Duty() {
       setDuties(
         Array.isArray(dutiesData)
           ? dutiesData
-          : dutiesData
-            ? [dutiesData]
-            : []
+          : []
       );
 
       setCrew(
         Array.isArray(crewData)
           ? crewData
-          : crewData
-            ? [crewData]
-            : []
+          : []
       );
 
       setBuses(
         Array.isArray(busesData)
           ? busesData
-          : busesData
-            ? [busesData]
-            : []
+          : []
       );
 
     } catch (error) {
@@ -104,16 +116,6 @@ function Duty() {
   useEffect(() => {
     loadData();
   }, []);
-
-  const showMessage = (text, type) => {
-    setMessage(text);
-    setMessageType(type);
-  };
-
-  const clearMessage = () => {
-    setMessage("");
-    setMessageType("");
-  };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -238,7 +240,7 @@ function Duty() {
         status: form.status
       };
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/duties`,
         {
           method: "POST",
@@ -255,6 +257,14 @@ function Duty() {
         data = await response.json();
       } catch {
         data = null;
+      }
+
+      if (response.status === 401) {
+        showMessage(
+          "Authentication expired. Please login again.",
+          "error"
+        );
+        return;
       }
 
       if (response.status === 409) {
@@ -313,7 +323,6 @@ function Duty() {
     <div className="management-page">
 
       <div className="management-header">
-
         <div>
           <h2>Duty Management</h2>
 
@@ -321,7 +330,6 @@ function Duty() {
             Manage linked and unlinked crew duties
           </p>
         </div>
-
       </div>
 
       {message && (
@@ -341,7 +349,6 @@ function Duty() {
       <div className="management-card">
 
         <div className="table-header">
-
           <div>
             <h3>Create Duty</h3>
 
@@ -349,7 +356,6 @@ function Duty() {
               Assign crew and bus resources to a duty.
             </p>
           </div>
-
         </div>
 
         <form
@@ -572,7 +578,6 @@ function Duty() {
             <table>
 
               <thead>
-
                 <tr>
                   <th>ID</th>
                   <th>Duty Name</th>
@@ -583,7 +588,6 @@ function Duty() {
                   <th>End</th>
                   <th>Status</th>
                 </tr>
-
               </thead>
 
               <tbody>
@@ -633,7 +637,6 @@ function Duty() {
                     </td>
 
                     <td>
-
                       <span
                         className={
                           duty.status ===
@@ -644,7 +647,6 @@ function Duty() {
                       >
                         {duty.status}
                       </span>
-
                     </td>
 
                   </tr>

@@ -1,32 +1,66 @@
 import { useEffect, useState } from "react";
+import { apiFetch, API_URL } from "./api";
 
-const API_URL = "http://127.0.0.1:8000";
 const ORGANIZATION_ID = 1;
 
 function Analytics() {
   const [data, setData] = useState(null);
   const [crew, setCrew] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const loadAnalytics = async () => {
     try {
       setLoading(true);
+      setError("");
 
-      const dashboardResponse = await fetch(
+      const dashboardResponse = await apiFetch(
         `${API_URL}/dashboard/${ORGANIZATION_ID}`
       );
 
-      const crewResponse = await fetch(
+      const crewResponse = await apiFetch(
         `${API_URL}/crew?organization_id=${ORGANIZATION_ID}`
       );
 
-      const dashboardData = await dashboardResponse.json();
-      const crewData = await crewResponse.json();
+      if (!dashboardResponse.ok) {
+        throw new Error(
+          `Dashboard request failed: ${dashboardResponse.status}`
+        );
+      }
+
+      if (!crewResponse.ok) {
+        throw new Error(
+          `Crew request failed: ${crewResponse.status}`
+        );
+      }
+
+      const dashboardData =
+        await dashboardResponse.json();
+
+      const crewData =
+        await crewResponse.json();
 
       setData(dashboardData);
-      setCrew(crewData);
+
+      setCrew(
+        Array.isArray(crewData)
+          ? crewData
+          : []
+      );
+
     } catch (error) {
-      console.error("Error loading analytics:", error);
+      console.error(
+        "Error loading analytics:",
+        error
+      );
+
+      setError(
+        "Unable to load analytics data."
+      );
+
+      setData(null);
+      setCrew([]);
+
     } finally {
       setLoading(false);
     }
@@ -37,140 +71,207 @@ function Analytics() {
   }, []);
 
   if (loading) {
-    return <div className="dashboard-loading">Loading analytics...</div>;
+    return (
+      <div className="dashboard-loading">
+        Loading analytics...
+      </div>
+    );
   }
 
-  if (!data) {
-    return <div className="dashboard-loading">Unable to load analytics.</div>;
+  if (error || !data) {
+    return (
+      <div className="management-page">
+
+        <div className="management-card">
+          <h3>Analytics</h3>
+
+          <p>
+            {error ||
+              "Unable to load analytics data."}
+          </p>
+
+          <button
+            className="primary-button"
+            onClick={loadAnalytics}
+          >
+            Try Again
+          </button>
+        </div>
+
+      </div>
+    );
   }
 
   const drivers = crew.filter(
-    (member) => member.role.toUpperCase() === "DRIVER"
+    (member) =>
+      String(member.role || "").toUpperCase() ===
+      "DRIVER"
   ).length;
 
   const conductors = crew.filter(
-    (member) => member.role.toUpperCase() === "CONDUCTOR"
+    (member) =>
+      String(member.role || "").toUpperCase() ===
+      "CONDUCTOR"
   ).length;
 
   const availabilityRate =
     data.buses.total > 0
-      ? Math.round((data.buses.available / data.buses.total) * 100)
+      ? Math.round(
+          (data.buses.available /
+            data.buses.total) *
+            100
+        )
       : 0;
 
   const schedulingRate =
     data.trips.total > 0
-      ? Math.round((data.trips.scheduled / data.trips.total) * 100)
+      ? Math.round(
+          (data.trips.scheduled /
+            data.trips.total) *
+            100
+        )
       : 0;
 
   return (
     <div className="management-page">
 
       <div className="management-header">
+
         <div>
           <h2>Analytics & Reports</h2>
-          <p>Overview of your transport operations</p>
+
+          <p>
+            Overview of your transport operations
+          </p>
         </div>
 
-        <button className="primary-button" onClick={loadAnalytics}>
+        <button
+          className="primary-button"
+          onClick={loadAnalytics}
+        >
           Refresh
         </button>
-      </div>
 
-      {/* Main Statistics */}
+      </div>
 
       <div className="analytics-grid">
 
         <div className="analytics-card">
           <div className="analytics-icon">🚌</div>
+
           <div>
             <h3>Total Buses</h3>
+
             <div className="analytics-number">
               {data.buses.total}
             </div>
-            <p>{data.buses.available} available</p>
+
+            <p>
+              {data.buses.available} available
+            </p>
           </div>
         </div>
 
         <div className="analytics-card">
           <div className="analytics-icon">👥</div>
+
           <div>
             <h3>Total Crew</h3>
+
             <div className="analytics-number">
               {data.crew.total}
             </div>
-            <p>{data.crew.available} available</p>
+
+            <p>
+              {data.crew.available} available
+            </p>
           </div>
         </div>
 
         <div className="analytics-card">
           <div className="analytics-icon">🛣️</div>
+
           <div>
             <h3>Active Routes</h3>
+
             <div className="analytics-number">
               {data.routes.active}
             </div>
-            <p>of {data.routes.total} total routes</p>
+
+            <p>
+              of {data.routes.total} total routes
+            </p>
           </div>
         </div>
 
         <div className="analytics-card">
           <div className="analytics-icon">📅</div>
+
           <div>
             <h3>Scheduled Trips</h3>
+
             <div className="analytics-number">
               {data.trips.scheduled}
             </div>
-            <p>of {data.trips.total} total trips</p>
+
+            <p>
+              of {data.trips.total} total trips
+            </p>
           </div>
         </div>
 
       </div>
 
-      {/* Analytics Sections */}
-
       <div className="analytics-sections">
-
-        {/* Fleet */}
 
         <div className="management-card">
           <h3>Fleet Analytics</h3>
 
           <div className="analytics-row">
             <span>Total Buses</span>
-            <strong>{data.buses.total}</strong>
+            <strong>
+              {data.buses.total}
+            </strong>
           </div>
 
           <div className="analytics-row">
             <span>Available Buses</span>
-            <strong>{data.buses.available}</strong>
+            <strong>
+              {data.buses.available}
+            </strong>
           </div>
 
           <div className="analytics-row">
             <span>Unavailable Buses</span>
             <strong>
-              {data.buses.total - data.buses.available}
+              {data.buses.total -
+                data.buses.available}
             </strong>
           </div>
 
           <div className="analytics-row">
             <span>Availability Rate</span>
-            <strong>{availabilityRate}%</strong>
+            <strong>
+              {availabilityRate}%
+            </strong>
           </div>
         </div>
-
-        {/* Crew */}
 
         <div className="management-card">
           <h3>Crew Analytics</h3>
 
           <div className="analytics-row">
             <span>Total Crew</span>
-            <strong>{data.crew.total}</strong>
+            <strong>
+              {data.crew.total}
+            </strong>
           </div>
 
           <div className="analytics-row">
             <span>Available Crew</span>
-            <strong>{data.crew.available}</strong>
+            <strong>
+              {data.crew.available}
+            </strong>
           </div>
 
           <div className="analytics-row">
@@ -184,61 +285,71 @@ function Analytics() {
           </div>
         </div>
 
-        {/* Scheduling */}
-
         <div className="management-card">
           <h3>Scheduling Analytics</h3>
 
           <div className="analytics-row">
             <span>Total Trips</span>
-            <strong>{data.trips.total}</strong>
+            <strong>
+              {data.trips.total}
+            </strong>
           </div>
 
           <div className="analytics-row">
             <span>Scheduled Trips</span>
-            <strong>{data.trips.scheduled}</strong>
+            <strong>
+              {data.trips.scheduled}
+            </strong>
           </div>
 
           <div className="analytics-row">
             <span>Automatic Schedules</span>
-            <strong>{data.schedules.automatic}</strong>
+            <strong>
+              {data.schedules.automatic}
+            </strong>
           </div>
 
           <div className="analytics-row">
             <span>Manual Schedules</span>
-            <strong>{data.schedules.manual}</strong>
+            <strong>
+              {data.schedules.manual}
+            </strong>
           </div>
 
           <div className="analytics-row">
             <span>Scheduling Rate</span>
-            <strong>{schedulingRate}%</strong>
+            <strong>
+              {schedulingRate}%
+            </strong>
           </div>
         </div>
-
-        {/* Duties */}
 
         <div className="management-card">
           <h3>Duty Analytics</h3>
 
           <div className="analytics-row">
             <span>Total Duties</span>
-            <strong>{data.duties.total}</strong>
+            <strong>
+              {data.duties.total}
+            </strong>
           </div>
 
           <div className="analytics-row">
             <span>Linked Duties</span>
-            <strong>{data.duties.linked}</strong>
+            <strong>
+              {data.duties.linked}
+            </strong>
           </div>
 
           <div className="analytics-row">
             <span>Unlinked Duties</span>
-            <strong>{data.duties.unlinked}</strong>
+            <strong>
+              {data.duties.unlinked}
+            </strong>
           </div>
         </div>
 
       </div>
-
-      {/* Operations Health */}
 
       <div className="management-card analytics-health">
 
