@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-
 import { apiFetch, API_URL } from "./api";
+
+const ORGANIZATION_ID = 1;
 
 function Fleet() {
   const [buses, setBuses] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [showForm, setShowForm] = useState(false);
 
   const [form, setForm] = useState({
-    organization_id: 1,
+    organization_id: ORGANIZATION_ID,
     bus_number: "",
     registration_number: "",
     capacity: "",
@@ -18,10 +18,16 @@ function Fleet() {
   });
 
   const loadBuses = async () => {
+    setLoading(true);
+
     try {
-      const response = await fetch(
-        `${API_URL}/buses?organization_id=1`
+      const response = await apiFetch(
+        `${API_URL}/buses?organization_id=${ORGANIZATION_ID}`
       );
+
+      if (!response.ok) {
+        throw new Error("Failed to load buses");
+      }
 
       const data = await response.json();
 
@@ -32,6 +38,7 @@ function Fleet() {
       setBuses(busList);
     } catch (error) {
       console.error("Error loading buses:", error);
+      setBuses([]);
     } finally {
       setLoading(false);
     }
@@ -52,15 +59,14 @@ function Fleet() {
     event.preventDefault();
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/buses`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
           body: JSON.stringify({
-            organization_id: Number(form.organization_id),
+            organization_id: Number(
+              form.organization_id
+            ),
             bus_number: form.bus_number,
             registration_number:
               form.registration_number,
@@ -76,7 +82,7 @@ function Fleet() {
 
         alert(
           errorData.detail ||
-          "Failed to add bus"
+            "Failed to add bus"
         );
 
         return;
@@ -85,7 +91,7 @@ function Fleet() {
       alert("Bus added successfully");
 
       setForm({
-        organization_id: 1,
+        organization_id: ORGANIZATION_ID,
         bus_number: "",
         registration_number: "",
         capacity: "",
@@ -95,50 +101,37 @@ function Fleet() {
 
       setShowForm(false);
 
-      loadBuses();
-
+      await loadBuses();
     } catch (error) {
       console.error("Error adding bus:", error);
-
       alert("Unable to connect to backend");
     }
   };
 
   return (
     <div className="management-page">
-
       <div className="management-header">
-
         <div>
           <h2>Fleet Management</h2>
-
-          <p>
-            Manage buses and fleet availability
-          </p>
+          <p>Manage buses and fleet availability</p>
         </div>
 
         <button
           className="primary-button"
-          onClick={() =>
-            setShowForm(!showForm)
-          }
+          onClick={() => setShowForm(!showForm)}
         >
           {showForm ? "Close" : "+ Add Bus"}
         </button>
-
       </div>
 
       {showForm && (
-
         <form
           className="bus-form"
           onSubmit={addBus}
         >
-
           <h3>Add New Bus</h3>
 
           <div className="form-grid">
-
             <div className="form-group">
               <label>Bus Number</label>
 
@@ -156,9 +149,7 @@ function Fleet() {
 
               <input
                 name="registration_number"
-                value={
-                  form.registration_number
-                }
+                value={form.registration_number}
                 onChange={handleChange}
                 placeholder="TN01AB1235"
                 required
@@ -230,7 +221,6 @@ function Fleet() {
                 </option>
               </select>
             </div>
-
           </div>
 
           <button
@@ -239,44 +229,30 @@ function Fleet() {
           >
             Save Bus
           </button>
-
         </form>
-
       )}
 
       <div className="management-card">
-
         <div className="table-header">
-
-          <h3>
-            Fleet Overview
-          </h3>
+          <h3>Fleet Overview</h3>
 
           <span>
             {buses.length} Bus
             {buses.length !== 1 ? "es" : ""}
           </span>
-
         </div>
 
         {loading ? (
-
           <div className="empty-state">
             Loading fleet...
           </div>
-
         ) : buses.length === 0 ? (
-
           <div className="empty-state">
             No buses found.
           </div>
-
         ) : (
-
           <div className="table-container">
-
             <table>
-
               <thead>
                 <tr>
                   <th>Bus Number</th>
@@ -288,11 +264,8 @@ function Fleet() {
               </thead>
 
               <tbody>
-
                 {buses.map((bus) => (
-
                   <tr key={bus.id}>
-
                     <td>
                       <strong>
                         {bus.bus_number}
@@ -303,16 +276,13 @@ function Fleet() {
                       {bus.registration_number}
                     </td>
 
-                    <td>
-                      {bus.capacity}
-                    </td>
+                    <td>{bus.capacity}</td>
 
                     <td>
                       {bus.bus_type || "-"}
                     </td>
 
                     <td>
-
                       <span
                         className={
                           bus.status ===
@@ -323,23 +293,14 @@ function Fleet() {
                       >
                         {bus.status}
                       </span>
-
                     </td>
-
                   </tr>
-
                 ))}
-
               </tbody>
-
             </table>
-
           </div>
-
         )}
-
       </div>
-
     </div>
   );
 }

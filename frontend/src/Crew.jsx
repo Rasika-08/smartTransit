@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { apiFetch, API_URL } from "./api";
 
-const API_URL = "http://127.0.0.1:8000";
+const ORGANIZATION_ID = 1;
 
 function Crew() {
   const [crew, setCrew] = useState([]);
@@ -8,7 +9,7 @@ function Crew() {
   const [showForm, setShowForm] = useState(false);
 
   const [form, setForm] = useState({
-    organization_id: 1,
+    organization_id: ORGANIZATION_ID,
     name: "",
     employee_id: "",
     role: "DRIVER",
@@ -17,10 +18,16 @@ function Crew() {
   });
 
   const loadCrew = async () => {
+    setLoading(true);
+
     try {
-      const response = await fetch(
-        `${API_URL}/crew?organization_id=1`
+      const response = await apiFetch(
+        `${API_URL}/crew?organization_id=${ORGANIZATION_ID}`
       );
+
+      if (!response.ok) {
+        throw new Error("Failed to load crew");
+      }
 
       const data = await response.json();
 
@@ -31,6 +38,7 @@ function Crew() {
       setCrew(crewList);
     } catch (error) {
       console.error("Error loading crew:", error);
+      setCrew([]);
     } finally {
       setLoading(false);
     }
@@ -51,15 +59,14 @@ function Crew() {
     event.preventDefault();
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/crew`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
           body: JSON.stringify({
-            organization_id: Number(form.organization_id),
+            organization_id: Number(
+              form.organization_id
+            ),
             name: form.name,
             employee_id: form.employee_id,
             role: form.role,
@@ -74,7 +81,7 @@ function Crew() {
 
         alert(
           errorData.detail ||
-          "Failed to add crew member"
+            "Failed to add crew member"
         );
 
         return;
@@ -83,7 +90,7 @@ function Crew() {
       alert("Crew member added successfully");
 
       setForm({
-        organization_id: 1,
+        organization_id: ORGANIZATION_ID,
         name: "",
         employee_id: "",
         role: "DRIVER",
@@ -93,23 +100,18 @@ function Crew() {
 
       setShowForm(false);
 
-      loadCrew();
-
+      await loadCrew();
     } catch (error) {
       console.error("Error adding crew:", error);
-
       alert("Unable to connect to backend");
     }
   };
 
   return (
     <div className="management-page">
-
       <div className="management-header">
-
         <div>
           <h2>Crew Management</h2>
-
           <p>
             Manage drivers, conductors and crew availability
           </p>
@@ -117,13 +119,10 @@ function Crew() {
 
         <button
           className="primary-button"
-          onClick={() =>
-            setShowForm(!showForm)
-          }
+          onClick={() => setShowForm(!showForm)}
         >
           {showForm ? "Close" : "+ Add Crew"}
         </button>
-
       </div>
 
       {showForm && (
@@ -134,7 +133,6 @@ function Crew() {
           <h3>Add Crew Member</h3>
 
           <div className="form-grid">
-
             <div className="form-group">
               <label>Name</label>
 
@@ -213,7 +211,6 @@ function Crew() {
                 </option>
               </select>
             </div>
-
           </div>
 
           <button
@@ -222,38 +219,30 @@ function Crew() {
           >
             Save Crew
           </button>
-
         </form>
       )}
 
       <div className="management-card">
-
         <div className="table-header">
-
           <h3>Crew Overview</h3>
 
           <span>
             {crew.length} Crew Member
             {crew.length !== 1 ? "s" : ""}
           </span>
-
         </div>
 
         {loading ? (
           <div className="empty-state">
             Loading crew...
           </div>
-
         ) : crew.length === 0 ? (
           <div className="empty-state">
             No crew members found.
           </div>
-
         ) : (
           <div className="table-container">
-
             <table>
-
               <thead>
                 <tr>
                   <th>Name</th>
@@ -265,11 +254,8 @@ function Crew() {
               </thead>
 
               <tbody>
-
                 {crew.map((member) => (
-
                   <tr key={member.id}>
-
                     <td>
                       <strong>
                         {member.name}
@@ -280,41 +266,31 @@ function Crew() {
                       {member.employee_id}
                     </td>
 
-                    <td>
-                      {member.role}
-                    </td>
+                    <td>{member.role}</td>
 
                     <td>
                       {member.phone || "-"}
                     </td>
 
                     <td>
-
                       <span
                         className={
-                          member.status === "AVAILABLE"
+                          member.status ===
+                          "AVAILABLE"
                             ? "status-badge available"
                             : "status-badge"
                         }
                       >
                         {member.status}
                       </span>
-
                     </td>
-
                   </tr>
-
                 ))}
-
               </tbody>
-
             </table>
-
           </div>
         )}
-
       </div>
-
     </div>
   );
 }

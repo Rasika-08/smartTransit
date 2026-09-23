@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
+import { apiFetch, API_URL } from "./api";
 
-const API_URL = "http://127.0.0.1:8000";
 const ORGANIZATION_ID = 1;
 
 function Scheduling() {
@@ -29,29 +29,47 @@ function Scheduling() {
     status: "SCHEDULED"
   });
 
+  const showMessage = (text, type) => {
+    setMessage(text);
+    setMessageType(type);
+  };
+
+  const clearMessage = () => {
+    setMessage("");
+    setMessageType("");
+  };
+
   const loadData = async () => {
     setLoading(true);
 
     try {
-      const [tripsResponse, schedulesResponse] =
-        await Promise.all([
-          fetch(
-            `${API_URL}/trips?organization_id=${ORGANIZATION_ID}`
-          ),
-          fetch(
-            `${API_URL}/schedules?organization_id=${ORGANIZATION_ID}`
-          )
-        ]);
+      const [
+        tripsResponse,
+        schedulesResponse
+      ] = await Promise.all([
+        apiFetch(
+          `${API_URL}/trips?organization_id=${ORGANIZATION_ID}`
+        ),
+        apiFetch(
+          `${API_URL}/schedules?organization_id=${ORGANIZATION_ID}`
+        )
+      ]);
 
       if (!tripsResponse.ok) {
-        throw new Error("Failed to load trips");
+        throw new Error(
+          "Failed to load trips"
+        );
       }
 
       if (!schedulesResponse.ok) {
-        throw new Error("Failed to load schedules");
+        throw new Error(
+          "Failed to load schedules"
+        );
       }
 
-      const tripsData = await tripsResponse.json();
+      const tripsData =
+        await tripsResponse.json();
+
       const schedulesData =
         await schedulesResponse.json();
 
@@ -88,16 +106,6 @@ function Scheduling() {
   useEffect(() => {
     loadData();
   }, []);
-
-  const showMessage = (text, type) => {
-    setMessage(text);
-    setMessageType(type);
-  };
-
-  const clearMessage = () => {
-    setMessage("");
-    setMessageType("");
-  };
 
   const formatTime = (value) => {
     if (!value) {
@@ -171,35 +179,42 @@ function Scheduling() {
     clearMessage();
   };
 
+  // ==================================================
+  // AUTOMATIC SCHEDULE GENERATION
+  // ==================================================
+
   const generateSchedule = async () => {
     setGenerating(true);
     clearMessage();
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/generate-schedule`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
           body: JSON.stringify({
             organization_id: ORGANIZATION_ID,
-            schedule_date: scheduleDate
+            scheduled_date: form.scheduled_date
           })
         }
       );
 
-      const data = await response.json();
+      let data = null;
+
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
 
       if (
-        data.success === false &&
-        data.message ===
+        data?.success === false &&
+        data?.message ===
           "No unscheduled trips found for this date"
       ) {
         showMessage(
           `No unscheduled trips found for ${formatDate(
-            scheduleDate
+            form.scheduled_date
           )}. All trips for this date have already been scheduled.`,
           "info"
         );
@@ -209,8 +224,8 @@ function Scheduling() {
 
       if (!response.ok) {
         showMessage(
-          data.detail ||
-            data.message ||
+          data?.detail ||
+            data?.message ||
             "Schedule generation failed.",
           "error"
         );
@@ -218,7 +233,7 @@ function Scheduling() {
         return;
       }
 
-      if (data.success === true) {
+      if (data?.success === true) {
         showMessage(
           data.message ||
             "Schedule generated successfully.",
@@ -231,7 +246,7 @@ function Scheduling() {
       }
 
       showMessage(
-        data.message ||
+        data?.message ||
           "The scheduling operation could not be completed.",
         "error"
       );
@@ -249,6 +264,10 @@ function Scheduling() {
       setGenerating(false);
     }
   };
+
+  // ==================================================
+  // MANUAL SCHEDULE CREATION
+  // ==================================================
 
   const createManualSchedule = async (event) => {
     event.preventDefault();
@@ -313,9 +332,6 @@ function Scheduling() {
         return;
       }
 
-      const scheduledDateTime =
-        `${form.scheduled_date}T00:00:00`;
-
       const startDateTime =
         `${form.scheduled_date}T${form.start_time}:00`;
 
@@ -330,30 +346,31 @@ function Scheduling() {
           "End time must be later than start time.",
           "error"
         );
+
         return;
       }
 
-      const requestBody = {
-        organization_id: ORGANIZATION_ID,
-        trip_id: Number(form.trip_id),
-        bus_id: Number(form.bus_id),
-        driver_id: Number(form.driver_id),
-        conductor_id: Number(form.conductor_id),
-        scheduled_date: scheduledDateTime,
-        start_time: startDateTime,
-        end_time: endDateTime,
-        duty_type: form.duty_type,
-        status: form.status
-      };
+      // ==============================================
+      // MANUAL SCHEDULE API REQUEST
+      // ==============================================
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/schedules`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(requestBody)
+          body: JSON.stringify({
+            organization_id: ORGANIZATION_ID,
+            trip_id: Number(form.trip_id),
+            bus_id: Number(form.bus_id),
+            driver_id: Number(form.driver_id),
+            conductor_id: Number(form.conductor_id),
+            scheduled_date:
+              form.scheduled_date,
+            start_time: startDateTime,
+            end_time: endDateTime,
+            duty_type: form.duty_type,
+            status: form.status
+          })
         }
       );
 
@@ -365,9 +382,9 @@ function Scheduling() {
         data = null;
       }
 
-      /*
-       * 409 means the backend detected a scheduling conflict.
-       */
+      // ==============================================
+      // CONFLICT DETECTED
+      // ==============================================
 
       if (response.status === 409) {
         showMessage(
@@ -378,6 +395,10 @@ function Scheduling() {
 
         return;
       }
+
+      // ==============================================
+      // OTHER BACKEND ERROR
+      // ==============================================
 
       if (!response.ok) {
         showMessage(
@@ -390,6 +411,10 @@ function Scheduling() {
         return;
       }
 
+      // ==============================================
+      // SUCCESS
+      // ==============================================
+
       showMessage(
         "Manual schedule created successfully.",
         "success"
@@ -397,10 +422,7 @@ function Scheduling() {
 
       await loadData();
 
-      /*
-       * Reset the form after successful creation.
-       */
-
+      // Reset form
       setForm({
         trip_id: "",
         bus_id: "",
@@ -433,7 +455,6 @@ function Scheduling() {
       {/* PAGE HEADER */}
 
       <div className="management-header">
-
         <div>
           <h2>Scheduling Management</h2>
 
@@ -442,9 +463,7 @@ function Scheduling() {
             bus and crew schedules
           </p>
         </div>
-
       </div>
-
 
       {/* MESSAGE */}
 
@@ -465,7 +484,6 @@ function Scheduling() {
           </span>
         </div>
       )}
-
 
       {/* AUTOMATIC SCHEDULING */}
 
@@ -527,7 +545,6 @@ function Scheduling() {
 
       </div>
 
-
       {/* MANUAL SCHEDULE */}
 
       <div className="management-card">
@@ -573,7 +590,6 @@ function Scheduling() {
 
             </div>
 
-
             {/* BUS */}
 
             <div className="form-group">
@@ -592,7 +608,6 @@ function Scheduling() {
               />
 
             </div>
-
 
             {/* DRIVER */}
 
@@ -613,7 +628,6 @@ function Scheduling() {
 
             </div>
 
-
             {/* CONDUCTOR */}
 
             <div className="form-group">
@@ -633,7 +647,6 @@ function Scheduling() {
 
             </div>
 
-
             {/* DATE */}
 
             <div className="form-group">
@@ -650,7 +663,6 @@ function Scheduling() {
               />
 
             </div>
-
 
             {/* START TIME */}
 
@@ -669,7 +681,6 @@ function Scheduling() {
 
             </div>
 
-
             {/* END TIME */}
 
             <div className="form-group">
@@ -686,7 +697,6 @@ function Scheduling() {
               />
 
             </div>
-
 
             {/* DUTY TYPE */}
 
@@ -718,7 +728,6 @@ function Scheduling() {
 
           </div>
 
-
           <div className="manual-form-actions">
 
             <button
@@ -736,7 +745,6 @@ function Scheduling() {
         </form>
 
       </div>
-
 
       {/* TRIPS */}
 
@@ -859,7 +867,6 @@ function Scheduling() {
         )}
 
       </div>
-
 
       {/* GENERATED SCHEDULES */}
 
